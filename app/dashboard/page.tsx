@@ -44,8 +44,20 @@ export default function DashboardPage() {
         fetchData()
       }
     }
+    
+    const handleFocus = () => {
+      if (isConnected && address) {
+        fetchData()
+      }
+    }
+    
     document.addEventListener('visibilitychange', handleVisibilityChange)
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('focus', handleFocus)
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('focus', handleFocus)
+    }
   }, [isConnected, address])
 
   async function fetchData() {
@@ -53,7 +65,11 @@ export default function DashboardPage() {
     
     setLoading(true)
     try {
-      const res = await fetch('/api/memberships')
+      // Add cache-busting to ensure fresh data
+      const res = await fetch(`/api/memberships?t=${Date.now()}`)
+      if (!res.ok) {
+        throw new Error('Failed to fetch memberships')
+      }
       const data = await res.json()
       setMemberships(data)
       
@@ -154,12 +170,22 @@ export default function DashboardPage() {
         <div className="bg-white rounded-2xl shadow-lg p-8 mb-8 border border-pink-100">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-3xl font-bold text-gray-900">My Memberships</h2>
-            <Link
-              href="/explore"
-              className="text-pink-600 hover:text-pink-700 font-semibold"
-            >
-              Browse More →
-            </Link>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={fetchData}
+                disabled={loading}
+                className="px-4 py-2 text-pink-600 hover:text-pink-700 font-semibold hover:bg-pink-50 rounded-lg transition disabled:opacity-50"
+                title="Refresh"
+              >
+                🔄 Refresh
+              </button>
+              <Link
+                href="/explore"
+                className="text-pink-600 hover:text-pink-700 font-semibold"
+              >
+                Browse More →
+              </Link>
+            </div>
           </div>
           {loading ? (
             <div className="text-center py-12">
@@ -189,12 +215,22 @@ export default function DashboardPage() {
         <div className="bg-white rounded-2xl shadow-lg p-8 border border-pink-100">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-3xl font-bold text-gray-900">My Created Memberships</h2>
-            <Link
-              href="/create-membership"
-              className="text-pink-600 hover:text-pink-700 font-semibold"
-            >
-              Create New →
-            </Link>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={fetchData}
+                disabled={loading}
+                className="px-4 py-2 text-pink-600 hover:text-pink-700 font-semibold hover:bg-pink-50 rounded-lg transition disabled:opacity-50"
+                title="Refresh"
+              >
+                🔄 Refresh
+              </button>
+              <Link
+                href="/create-membership"
+                className="text-pink-600 hover:text-pink-700 font-semibold"
+              >
+                Create New →
+              </Link>
+            </div>
           </div>
           {loading ? (
             <div className="text-center py-12">

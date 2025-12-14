@@ -204,7 +204,7 @@ export default function CreateMembershipPage() {
       const priceInUSDC = BigInt(Math.floor(parseFloat(formData.price) * 1000000))
       const expiryDuration = formData.isRecurring ? BigInt(formData.expiryDuration) : BigInt(0)
 
-      setToast({ message: 'Creating membership on blockchain...', type: 'info' })
+      setToast({ message: '⏳ Creating membership on blockchain... Please confirm the transaction in your wallet.', type: 'info' })
 
       // Create membership on blockchain
       writeContract({

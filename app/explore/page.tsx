@@ -26,8 +26,18 @@ export default function ExplorePage() {
         fetchMemberships()
       }
     }
+    
+    const handleFocus = () => {
+      fetchMemberships()
+    }
+    
     document.addEventListener('visibilitychange', handleVisibilityChange)
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('focus', handleFocus)
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('focus', handleFocus)
+    }
   }, [])
 
   async function fetchMemberships() {
@@ -36,8 +46,13 @@ export default function ExplorePage() {
       const params = new URLSearchParams()
       if (search) params.append('search', search)
       if (category) params.append('category', category)
+      // Add cache-busting to ensure fresh data
+      params.append('t', Date.now().toString())
       
       const res = await fetch(`/api/memberships?${params}`)
+      if (!res.ok) {
+        throw new Error('Failed to fetch memberships')
+      }
       const data = await res.json()
       
       // Sort memberships
@@ -62,9 +77,19 @@ export default function ExplorePage() {
     <div className="min-h-screen bg-gradient-to-b from-pink-50 to-white">
       <Navbar />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="mb-10">
-          <h1 className="text-5xl font-bold text-gray-900 mb-2">Explore Memberships</h1>
-          <p className="text-gray-600 text-lg">Discover amazing communities and exclusive content</p>
+        <div className="mb-10 flex items-center justify-between">
+          <div>
+            <h1 className="text-5xl font-bold text-gray-900 mb-2">Explore Memberships</h1>
+            <p className="text-gray-600 text-lg">Discover amazing communities and exclusive content</p>
+          </div>
+          <button
+            onClick={fetchMemberships}
+            disabled={loading}
+            className="px-4 py-2 text-pink-600 hover:text-pink-700 font-semibold hover:bg-pink-50 rounded-lg transition disabled:opacity-50 border-2 border-pink-200"
+            title="Refresh"
+          >
+            🔄 Refresh
+          </button>
         </div>
 
         {/* Search and Filters */}
