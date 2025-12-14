@@ -133,8 +133,23 @@ try {
     Write-Host "Status: $($response.StatusCode)" -ForegroundColor Green
     Write-Host $response.Content
 } catch {
-    Write-Host "Status: $($_.Exception.Response.StatusCode.value__)" -ForegroundColor Red
-    Write-Host "Error: $_" -ForegroundColor Red
+    $statusCode = $_.Exception.Response.StatusCode.value__
+    Write-Host "Status: $statusCode" -ForegroundColor Red
+    try {
+        $errorStream = $_.Exception.Response.GetResponseStream()
+        $reader = New-Object System.IO.StreamReader($errorStream)
+        $errorBody = $reader.ReadToEnd()
+        $errorJson = $errorBody | ConvertFrom-Json
+        Write-Host "Error: $($errorJson.error)" -ForegroundColor Red
+        if ($errorJson.details) {
+            Write-Host "Details: $($errorJson.details | ConvertTo-Json -Compress)" -ForegroundColor Yellow
+        }
+    } catch {
+        Write-Host "Error: $_" -ForegroundColor Red
+    }
+    if ($statusCode -eq 500) {
+        Write-Host "Note: This is likely due to missing SIDESHIFT_SECRET or SIDESHIFT_AFFILIATE_ID in .env.local" -ForegroundColor Yellow
+    }
 }
 Write-Host ""
 Write-Host "---"
@@ -147,8 +162,23 @@ try {
     Write-Host "Status: $($response.StatusCode)" -ForegroundColor Green
     Write-Host $response.Content
 } catch {
-    Write-Host "Status: $($_.Exception.Response.StatusCode.value__)" -ForegroundColor Red
-    Write-Host "Error: $_" -ForegroundColor Red
+    $statusCode = $_.Exception.Response.StatusCode.value__
+    Write-Host "Status: $statusCode" -ForegroundColor Red
+    try {
+        $errorStream = $_.Exception.Response.GetResponseStream()
+        $reader = New-Object System.IO.StreamReader($errorStream)
+        $errorBody = $reader.ReadToEnd()
+        $errorJson = $errorBody | ConvertFrom-Json
+        Write-Host "Error: $($errorJson.error)" -ForegroundColor Red
+        if ($errorJson.details) {
+            Write-Host "Details: $($errorJson.details | ConvertTo-Json -Compress)" -ForegroundColor Yellow
+        }
+    } catch {
+        Write-Host "Error: $_" -ForegroundColor Red
+    }
+    if ($statusCode -eq 500) {
+        Write-Host "Note: This is likely due to missing SIDESHIFT_SECRET or SIDESHIFT_AFFILIATE_ID in .env.local" -ForegroundColor Yellow
+    }
 }
 Write-Host ""
 Write-Host "---"
