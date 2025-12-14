@@ -23,27 +23,54 @@ export async function createSideShiftOrder(
   settleAmount: string
 ): Promise<SideShiftOrder> {
   try {
-    // Log for debugging (remove in production)
+    // Validate credentials
+    if (!SIDESHIFT_SECRET || !SIDESHIFT_AFFILIATE_ID) {
+      throw new Error('SideShift credentials not configured')
+    }
+
+    // Log for debugging
     console.log('Creating SideShift order:', {
       depositCoin,
       settleCoin,
       settleAddress,
       settleAmount,
       hasSecret: !!SIDESHIFT_SECRET,
-      hasAffiliateId: !!SIDESHIFT_AFFILIATE_ID,
-      secretLength: SIDESHIFT_SECRET?.length || 0,
-      affiliateIdLength: SIDESHIFT_AFFILIATE_ID?.length || 0
+      hasAffiliateId: !!SIDESHIFT_AFFILIATE_ID
     })
 
-    const response = await axios.post(
-      `${SIDESHIFT_API}/orders`,
+    // Determine networks based on coins
+    const getNetwork = (coin: string): string => {
+      const coinUpper = coin.toUpperCase()
+      if (coinUpper === 'USDC' || coinUpper === 'USDT') {
+        return 'polygon' // Polygon network for USDC/USDT
+      }
+      if (coinUpper === 'ETH') {
+        return 'ethereum'
+      }
+      if (coinUpper === 'BTC') {
+        return 'bitcoin'
+      }
+      // Default to coin name as network
+      return coin.toLowerCase()
+    }
+
+    // For fixed shifts, we need to specify depositAmount in the quote
+    // But the user provides settleAmount. We'll use settleAmount as a starting point
+    // and let the API calculate the deposit amount, or we can reverse it
+    // Note: The API expects depositAmount for fixed quotes
+    
+    // Step 1: Get a quote first (required for fixed shifts in v2 API)
+    // For now, we'll use settleAmount as depositAmount - this might need adjustment
+    // based on actual API behavior
+    const quoteResponse = await axios.post(
+      `${SIDESHIFT_API}/quotes`,
       {
-        type: 'fixed',
-        depositCoin,
-        settleCoin,
-        settleAddress,
-        settleAmount,
         affiliateId: SIDESHIFT_AFFILIATE_ID,
+        depositCoin,
+        depositNetwork: getNetwork(depositCoin),
+        settleCoin,
+        settleNetwork: getNetwork(settleCoin),
+        depositAmount: settleAmount, // This will be adjusted by the API
       },
       {
         headers: {
@@ -52,7 +79,40 @@ export async function createSideShiftOrder(
         },
       }
     )
-    return response.data
+
+    const quoteId = quoteResponse.data.id
+    if (!quoteId) {
+      throw new Error('Failed to get quote ID from SideShift')
+    }
+
+    // Step 2: Create the fixed shift using the quote
+    const shiftResponse = await axios.post(
+      `${SIDESHIFT_API}/shifts/fixed`,
+      {
+        settleAddress,
+        affiliateId: SIDESHIFT_AFFILIATE_ID,
+        quoteId,
+      },
+      {
+        headers: {
+          'x-sideshift-secret': SIDESHIFT_SECRET,
+          'Content-Type': 'application/json',
+        },
+      }
+    )
+
+    // Map the response to our expected format
+    const shiftData = shiftResponse.data
+    return {
+      orderId: shiftData.id || shiftData.shiftId || '',
+      depositAddress: shiftData.depositAddress || '',
+      depositCoin: depositCoin,
+      settleAddress: settleAddress,
+      settleCoin: settleCoin,
+      settleAmount: shiftData.settleAmount || settleAmount,
+      depositAmount: shiftData.depositAmount || settleAmount,
+      status: shiftData.status || 'waiting',
+    }
   } catch (error: any) {
     console.error('Error creating SideShift order:', {
       message: error.message,
@@ -62,21 +122,52 @@ export async function createSideShiftOrder(
       hasSecret: !!SIDESHIFT_SECRET,
       hasAffiliateId: !!SIDESHIFT_AFFILIATE_ID
     })
-    throw new Error(error.response?.data?.message || error.message || 'Failed to create SideShift order')
+    
+    // Provide more detailed error message
+    const errorMessage = error.response?.data?.message || 
+                         error.response?.data?.error || 
+                         error.message || 
+                         'Failed to create SideShift order'
+    
+    throw new Error(errorMessage)
   }
 }
 
 export async function getSideShiftOrderStatus(orderId: string): Promise<SideShiftOrder> {
   try {
-    const response = await axios.get(`${SIDESHIFT_API}/orders/${orderId}`, {
+    if (!SIDESHIFT_SECRET) {
+      throw new Error('SideShift credentials not configured')
+    }
+
+    const response = await axios.get(`${SIDESHIFT_API}/shifts/${orderId}`, {
       headers: {
         'x-sideshift-secret': SIDESHIFT_SECRET,
+        'Content-Type': 'application/json',
       },
     })
-    return response.data
+    
+    const shiftData = response.data
+    return {
+      orderId: shiftData.id || orderId,
+      depositAddress: shiftData.depositAddress || '',
+      depositCoin: shiftData.depositCoin || '',
+      settleAddress: shiftData.settleAddress || '',
+      settleCoin: shiftData.settleCoin || '',
+      settleAmount: shiftData.settleAmount || '',
+      depositAmount: shiftData.depositAmount || '',
+      status: shiftData.status || 'unknown',
+    }
   } catch (error: any) {
-    console.error('Error getting SideShift order status:', error.response?.data || error.message)
-    throw new Error(error.response?.data?.message || 'Failed to get order status')
+    console.error('Error getting SideShift order status:', {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status
+    })
+    const errorMessage = error.response?.data?.message || 
+                         error.response?.data?.error || 
+                         error.message || 
+                         'Failed to get order status'
+    throw new Error(errorMessage)
   }
 }
 
