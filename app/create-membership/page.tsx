@@ -41,7 +41,8 @@ export default function CreateMembershipPage() {
       const id = parseMembershipCreatedEvent(receipt)
       if (id) {
         setMembershipId(id)
-        setTimeout(() => syncMembershipToDB(id), 1000)
+        setToast({ message: 'Transaction confirmed! Syncing membership...', type: 'info' })
+        setTimeout(() => syncMembershipToDB(id), 1500)
       }
     }
   }, [isSuccess, receipt, address])
@@ -67,16 +68,26 @@ export default function CreateMembershipPage() {
       })
 
       if (res.ok) {
-        setToast({ message: 'Membership created successfully!', type: 'success' })
+        setToast({ 
+          message: `🎉 Membership "${formData.name}" created successfully! Redirecting to dashboard...`, 
+          type: 'success' 
+        })
+        // Wait a bit longer to show the success message
         setTimeout(() => {
           router.push('/dashboard')
-        }, 2000)
+          // Force refresh on dashboard
+          router.refresh()
+        }, 3000)
       } else {
-        setToast({ message: 'Failed to sync membership to database', type: 'error' })
+        const errorData = await res.json().catch(() => ({}))
+        setToast({ 
+          message: errorData.error || 'Failed to sync membership to database. Please try again.', 
+          type: 'error' 
+        })
       }
     } catch (error) {
       console.error('Error syncing membership:', error)
-      setToast({ message: 'Error syncing membership', type: 'error' })
+      setToast({ message: 'Error syncing membership. Please refresh and check your dashboard.', type: 'error' })
     }
   }
 

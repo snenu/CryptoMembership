@@ -37,6 +37,17 @@ export default function DashboardPage() {
     }
   }, [isConnected, address, userMembershipIds])
 
+  // Refresh data when page becomes visible (user returns from creating membership)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && isConnected && address) {
+        fetchData()
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+  }, [isConnected, address])
+
   async function fetchData() {
     if (!address) return
     

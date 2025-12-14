@@ -19,6 +19,17 @@ export default function ExplorePage() {
     fetchMemberships()
   }, [search, category, sortBy])
 
+  // Refresh data when page becomes visible
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchMemberships()
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+  }, [])
+
   async function fetchMemberships() {
     setLoading(true)
     try {
