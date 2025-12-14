@@ -23,6 +23,18 @@ export async function createSideShiftOrder(
   settleAmount: string
 ): Promise<SideShiftOrder> {
   try {
+    // Log for debugging (remove in production)
+    console.log('Creating SideShift order:', {
+      depositCoin,
+      settleCoin,
+      settleAddress,
+      settleAmount,
+      hasSecret: !!SIDESHIFT_SECRET,
+      hasAffiliateId: !!SIDESHIFT_AFFILIATE_ID,
+      secretLength: SIDESHIFT_SECRET?.length || 0,
+      affiliateIdLength: SIDESHIFT_AFFILIATE_ID?.length || 0
+    })
+
     const response = await axios.post(
       `${SIDESHIFT_API}/orders`,
       {
@@ -42,8 +54,15 @@ export async function createSideShiftOrder(
     )
     return response.data
   } catch (error: any) {
-    console.error('Error creating SideShift order:', error.response?.data || error.message)
-    throw new Error(error.response?.data?.message || 'Failed to create SideShift order')
+    console.error('Error creating SideShift order:', {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      hasSecret: !!SIDESHIFT_SECRET,
+      hasAffiliateId: !!SIDESHIFT_AFFILIATE_ID
+    })
+    throw new Error(error.response?.data?.message || error.message || 'Failed to create SideShift order')
   }
 }
 

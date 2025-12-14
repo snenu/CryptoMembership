@@ -13,10 +13,24 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate SideShift credentials
-    if (!process.env.SIDESHIFT_SECRET || !process.env.SIDESHIFT_AFFILIATE_ID) {
-      console.error('SideShift credentials not configured')
+    const secret = process.env.SIDESHIFT_SECRET
+    const affiliateId = process.env.SIDESHIFT_AFFILIATE_ID
+    
+    if (!secret || !affiliateId) {
+      console.error('SideShift credentials not configured', {
+        hasSecret: !!secret,
+        hasAffiliateId: !!affiliateId,
+        secretLength: secret?.length || 0,
+        affiliateIdLength: affiliateId?.length || 0
+      })
       return NextResponse.json(
-        { error: 'SideShift API credentials not configured. Please check environment variables.' },
+        { 
+          error: 'SideShift API credentials not configured. Please check environment variables.',
+          debug: {
+            hasSecret: !!secret,
+            hasAffiliateId: !!affiliateId
+          }
+        },
         { status: 500 }
       )
     }
@@ -24,12 +38,21 @@ export async function POST(request: NextRequest) {
     const order = await createSideShiftOrder(depositCoin, settleCoin, settleAddress, settleAmount)
     return NextResponse.json(order)
   } catch (error: any) {
-    console.error('SideShift API Error:', error)
+    console.error('SideShift API Error:', {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status,
+      statusText: error.response?.statusText
+    })
+    
     const errorMessage = error.response?.data?.message || error.message || 'Failed to create SideShift order'
+    const errorDetails = error.response?.data || null
+    
     return NextResponse.json(
       { 
         error: errorMessage,
-        details: error.response?.data || null
+        details: errorDetails,
+        statusCode: error.response?.status
       },
       { status: 500 }
     )
