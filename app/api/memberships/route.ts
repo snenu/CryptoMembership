@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import connectDB from '@/lib/mongodb'
 import Membership from '@/models/Membership'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: NextRequest) {
   try {
     await connectDB()
@@ -28,8 +30,24 @@ export async function GET(request: NextRequest) {
     }
 
     const memberships = await Membership.find(query).sort({ createdAt: -1 })
-    return NextResponse.json(memberships)
+    
+    // Log for debugging
+    console.log(`[API] Returning ${memberships.length} memberships`, {
+      creator,
+      category,
+      search,
+      ids: memberships.map(m => m.membershipId)
+    })
+    
+    return NextResponse.json(memberships, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      },
+    })
   } catch (error: any) {
+    console.error('[API] Error fetching memberships:', error)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }

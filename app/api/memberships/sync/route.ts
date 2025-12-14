@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import connectDB from '@/lib/mongodb'
 import Membership from '@/models/Membership'
 
+export const dynamic = 'force-dynamic'
+
 export async function POST(request: NextRequest) {
   try {
     await connectDB()
@@ -24,6 +26,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
+    console.log('[SYNC] Syncing membership:', { membershipId, creator, name })
+
     // Find or create membership
     let membership = await Membership.findOne({ membershipId })
     
@@ -37,8 +41,10 @@ export async function POST(request: NextRequest) {
       membership.coverImage = coverImage || membership.coverImage
       membership.metadataURI = metadataURI || membership.metadataURI
       membership.category = category || membership.category
+      membership.isActive = true // Ensure it's active
       if (totalMembers !== undefined) membership.totalMembers = totalMembers
       await membership.save()
+      console.log('[SYNC] Updated existing membership:', membership._id)
     } else {
       // Create new
       membership = await Membership.create({
@@ -55,7 +61,22 @@ export async function POST(request: NextRequest) {
         isActive: true,
         totalMembers: totalMembers || 0,
       })
+      console.log('[SYNC] Created new membership:', membership._id, membership.membershipId)
     }
+
+    // Verify it was saved
+    const verify = await Membership.findOne({ membershipId })
+    if (!verify) {
+      console.error('[SYNC] Failed to verify membership was saved')
+      return NextResponse.json({ error: 'Failed to save membership' }, { status: 500 })
+    }
+
+    console.log('[SYNC] Membership synced successfully:', {
+      id: verify._id,
+      membershipId: verify.membershipId,
+      name: verify.name,
+      isActive: verify.isActive
+    })
 
     return NextResponse.json(membership)
   } catch (error: any) {

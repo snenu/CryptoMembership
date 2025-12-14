@@ -37,6 +37,17 @@ export default function DashboardPage() {
     }
   }, [isConnected, address, userMembershipIds])
 
+  // Check for refresh query parameter
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('refresh') === 'true' && isConnected && address) {
+      // Remove the query parameter
+      window.history.replaceState({}, '', '/dashboard')
+      // Fetch fresh data
+      setTimeout(() => fetchData(), 500)
+    }
+  }, [isConnected, address])
+
   // Refresh data when page becomes visible (user returns from creating membership)
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -66,16 +77,31 @@ export default function DashboardPage() {
     setLoading(true)
     try {
       // Add cache-busting to ensure fresh data
-      const res = await fetch(`/api/memberships?t=${Date.now()}`)
+      const res = await fetch(`/api/memberships?t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+        },
+      })
       if (!res.ok) {
         throw new Error('Failed to fetch memberships')
       }
       const data = await res.json()
+      console.log('[Dashboard] Fetched memberships:', data.length, 'items')
+      console.log('[Dashboard] Created by address:', address.toLowerCase())
+      
       setMemberships(data)
       
       // Filter created memberships
-      const created = data.filter((m: Membership) => m.creator.toLowerCase() === address.toLowerCase())
+      const created = data.filter((m: Membership) => {
+        const matches = m.creator.toLowerCase() === address.toLowerCase()
+        if (matches) {
+          console.log('[Dashboard] Found created membership:', m.membershipId, m.name)
+        }
+        return matches
+      })
       setCreatedMemberships(created)
+      console.log('[Dashboard] Created memberships count:', created.length)
       
       // Filter user's memberships (from blockchain if available)
       if (userMembershipIds && Array.isArray(userMembershipIds)) {

@@ -49,11 +49,17 @@ export default function ExplorePage() {
       // Add cache-busting to ensure fresh data
       params.append('t', Date.now().toString())
       
-      const res = await fetch(`/api/memberships?${params}`)
+      const res = await fetch(`/api/memberships?${params}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+        },
+      })
       if (!res.ok) {
         throw new Error('Failed to fetch memberships')
       }
       const data = await res.json()
+      console.log('[Explore] Fetched memberships:', data.length, 'items')
       
       // Sort memberships
       let sorted = [...data]
@@ -63,6 +69,13 @@ export default function ExplorePage() {
         sorted.sort((a, b) => b.price - a.price)
       } else if (sortBy === 'members') {
         sorted.sort((a, b) => (b.totalMembers || 0) - (a.totalMembers || 0))
+      } else {
+        // Default: newest first (already sorted by API, but ensure it)
+        sorted.sort((a, b) => {
+          const dateA = new Date(a.createdAt || 0).getTime()
+          const dateB = new Date(b.createdAt || 0).getTime()
+          return dateB - dateA
+        })
       }
       
       setMemberships(sorted)

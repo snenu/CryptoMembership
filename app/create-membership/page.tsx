@@ -51,6 +51,8 @@ export default function CreateMembershipPage() {
     if (!id || !address) return
 
     try {
+      setToast({ message: '⏳ Syncing membership to database...', type: 'info' })
+      
       const res = await fetch('/api/memberships/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -67,27 +69,50 @@ export default function CreateMembershipPage() {
         }),
       })
 
-      if (res.ok) {
+      const responseData = await res.json()
+
+      if (res.ok && responseData) {
+        console.log('Membership synced successfully:', responseData)
+        
+        // Verify the membership was saved by fetching it
+        const verifyRes = await fetch(`/api/memberships/${responseData.membershipId || id}?byId=true`)
+        if (verifyRes.ok) {
+          const verified = await verifyRes.json()
+          console.log('Verified membership exists:', verified)
+        }
+        
         setToast({ 
           message: `🎉 Membership "${formData.name}" created successfully! Redirecting to dashboard...`, 
           type: 'success' 
         })
-        // Wait a bit longer to show the success message
-        setTimeout(() => {
-          router.push('/dashboard')
-          // Force refresh on dashboard
-          router.refresh()
-        }, 3000)
+        
+        // Wait a bit longer to ensure database write is complete and indexed
+        await new Promise(resolve => setTimeout(resolve, 2500))
+        
+        // Use window.location for a full page reload to ensure fresh data
+        window.location.href = '/dashboard?refresh=true'
       } else {
-        const errorData = await res.json().catch(() => ({}))
+        console.error('Sync failed:', responseData)
+        const errorMessage = responseData.error || 'Failed to sync membership to database'
         setToast({ 
-          message: errorData.error || 'Failed to sync membership to database. Please try again.', 
+          message: `${errorMessage}. The membership was created on blockchain but may not appear in listings yet.`, 
           type: 'error' 
         })
+        // Still redirect but with a warning
+        setTimeout(() => {
+          router.push('/dashboard?refresh=true')
+        }, 3000)
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error syncing membership:', error)
-      setToast({ message: 'Error syncing membership. Please refresh and check your dashboard.', type: 'error' })
+      setToast({ 
+        message: `Error syncing membership: ${error.message}. The membership was created on blockchain. Please refresh the dashboard.`, 
+        type: 'error' 
+      })
+      // Still redirect
+      setTimeout(() => {
+        router.push('/dashboard?refresh=true')
+      }, 3000)
     }
   }
 
