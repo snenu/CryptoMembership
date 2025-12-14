@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useAccount } from 'wagmi'
+import { useAccount, useDisconnect } from 'wagmi'
 import { useWeb3Modal } from '@web3modal/wagmi/react'
 import { usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
@@ -13,12 +13,25 @@ export default function Navbar() {
   
   // Always call hooks (React rules), but use values conditionally
   const { address, isConnected } = useAccount()
+  const { disconnect } = useDisconnect()
   const { open } = useWeb3Modal()
 
   // Prevent hydration mismatch
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  const handleConnect = async () => {
+    try {
+      if (typeof window !== 'undefined') {
+        await open()
+      }
+    } catch (error) {
+      console.error('Error opening wallet modal:', error)
+      // Fallback: try to show a message to the user
+      alert('Please make sure your wallet extension is installed and try again.')
+    }
+  }
 
   return (
     <nav className="bg-white/95 backdrop-blur-sm border-b border-pink-100 sticky top-0 z-50 shadow-sm">
@@ -101,7 +114,7 @@ export default function Navbar() {
                   Settings
                 </Link>
                 <button
-                  onClick={() => open()}
+                  onClick={handleConnect}
                   className="px-6 py-2.5 bg-gradient-to-r from-pink-500 to-pink-600 text-white rounded-lg hover:from-pink-600 hover:to-pink-700 transition shadow-md font-medium"
                 >
                   {address?.slice(0, 6)}...{address?.slice(-4)}
@@ -109,7 +122,7 @@ export default function Navbar() {
               </div>
             ) : (
               <button
-                onClick={() => open()}
+                onClick={handleConnect}
                 className="px-6 py-2.5 bg-gradient-to-r from-pink-500 to-pink-600 text-white rounded-lg hover:from-pink-600 hover:to-pink-700 transition shadow-md font-medium"
               >
                 Connect Wallet

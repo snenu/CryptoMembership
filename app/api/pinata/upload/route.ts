@@ -3,6 +3,14 @@ import { uploadToPinata, uploadJSONToPinata } from '@/utils/pinata'
 
 export async function POST(request: NextRequest) {
   try {
+    // Check if Pinata credentials are configured
+    if (!process.env.PINATA_API_KEY || !process.env.PINATA_SECRET_KEY) {
+      return NextResponse.json(
+        { error: 'Pinata API credentials not configured. Please check environment variables.' },
+        { status: 500 }
+      )
+    }
+
     const formData = await request.formData()
     const file = formData.get('file') as File
     const type = formData.get('type') as string
@@ -19,7 +27,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ uri })
     }
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    console.error('Pinata upload error:', error)
+    return NextResponse.json(
+      { 
+        error: error.message || 'Failed to upload to Pinata',
+        details: error.response?.data || null
+      },
+      { status: 500 }
+    )
   }
 }
 
