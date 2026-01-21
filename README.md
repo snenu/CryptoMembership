@@ -108,6 +108,10 @@ Polygon is the **core blockchain layer** of CryptoMembership. Here's how it's in
 - **Scalable**: Can handle thousands of transactions per second
 - **Eco-friendly**: Proof-of-Stake consensus
 
+- ### Contract Address
+- **Polygon Amoy**: `0xA8006F58a9fe59e23a8768549ebfA89A9dE75908`
+
+
 ## 💳 How We Use SideShift
 
 SideShift removes the friction of cryptocurrency payments. Here's how it works:
@@ -373,6 +377,9 @@ Deploy to Vercel, Netlify, or any Next.js-compatible platform:
 npm run build
 npm start
 ```
+
+
+
 
 ## 🧪 Testing
 
