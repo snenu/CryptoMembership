@@ -388,12 +388,7 @@ Test all API endpoints using the PowerShell script:
 ```powershell
 .\test-apis.ps1
 ```
-
-## 📝 License
-
-MIT
-
-## 🤝 Support
+ 
 
 For issues and questions, please open an issue on GitHub.
 
